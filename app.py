@@ -22,11 +22,14 @@ def get_posts(q, thread_num):
     :return:
     """
     while True:
-        task = q.get()
-        data = requests.get(task)
-        result.append(data.json())
-        q.task_done()
-        print(f'Thread #{thread_num} is doing task #{task} in the queue.')
+        try:
+            task = q.get()
+            data = requests.get(task)
+            result.append(data.json())
+            q.task_done()
+            print(f'Thread #{thread_num} is doing task #{task} in the queue.')
+        except requests.exceptions.RequestException as e:  # This is the correct syntax
+            raise SystemExit(e)
 
 
 @app.route("/")
