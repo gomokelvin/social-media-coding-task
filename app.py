@@ -5,42 +5,53 @@ from threading import Thread
 
 app = Flask(__name__)
 
-result = []
+results = {}
 # Queue to hold the urls
 q = Queue()
+
 urls = [
-    'https://takehome.io/twitter',
-    'https://takehome.io/facebook',
-    'https://takehome.io/instagram'
+    # ('social_media_name', 'url_name')
+    ['Twitter', 'https://takehome.io/twitter'],
+    ['Facebook', 'https://takehome.io/facebook'],
+    ['Instagram', 'https://takehome.io/instagram']
 ]
 num_threads = min(20, len(urls))
 
 
-def get_posts(q, thread_num):
+def get_posts(q, thread_num, r):
     """
-    Method to get social media posts.
-    :return:
+
+    :re turn:
     """
     while True:
         try:
             task = q.get()
-            data = requests.get(task)
-            result.append(data.json())
-            q.task_done()
-            print(f'Thread #{thread_num} is doing task #{task} in the queue.')
-        except requests.exceptions.RequestException as e:  # This is the correct syntax
-            raise SystemExit(e)
+            data = requests.get(task[1])
+            # create dict record
+            results.update({urls[r][0]: len(data.json())})
+            print(f'Thread #{thread_num} is doing task #{task} in the queue {r}.')
+        except ConnectionError:
+            print("Connection errors!!!")
+        q.task_done()
 
 
 @app.route("/")
 def social_network_activity():
     # TODO: your code here
-    for i in range(4):
-        worker = Thread(target=get_posts, args=(q, i,), daemon=True)
+
+    # Starting worker threads on queue processing
+    for i in range(len(urls)):
+        worker = Thread(target=get_posts, args=(q, i, i), daemon=True)
         worker.start()
 
-    logging.info('All tasks completed.')
+    # Threaded function for queue processing.
+    # Starting worker threads on queue processing
+    for j in range(len(urls)):
+        q.put(urls[j])
+
     q.join()
-    json_response = result  # {}
+    logging.info('All tasks completed.')
+
+    json_response = results
 
     return json_response
